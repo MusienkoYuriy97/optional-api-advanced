@@ -9,7 +9,9 @@ import com.solbeg.service.UserService;
 import com.solbeg.service.Users;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
@@ -23,6 +25,7 @@ public class Main {
      */
     public static Optional<String> optionalOfString(String text) {
 
+        return Optional.ofNullable(text);
     }
 
     /**
@@ -33,6 +36,8 @@ public class Main {
      */
     public static void deposit(UserProvider userProvider, BigDecimal amount) {
 
+        userProvider.getUser()
+                .ifPresent(user -> user.setBalance(user.getBalance().add(amount)));
     }
 
     /**
@@ -43,6 +48,7 @@ public class Main {
      */
     public static Optional<User> optionalOfUser(User user) {
 
+        return Optional.of(user);
     }
 
     /**
@@ -55,6 +61,7 @@ public class Main {
      */
     public static User getUser(UserProvider userProvider, User defaultUser) {
 
+        return userProvider.getUser().orElse(defaultUser);
     }
 
     /**
@@ -66,6 +73,8 @@ public class Main {
      */
     public static void processUser(UserProvider userProvider, UserService userService) {
 
+        userProvider.getUser()
+                .ifPresentOrElse(userService::processUser, userService::processWithNoUser);
     }
 
     /**
@@ -76,6 +85,8 @@ public class Main {
      * @return provided or generated user
      */
     public static User getOrGenerateUser(UserProvider userProvider) {
+
+        return userProvider.getUser().orElseGet(Users::generateUser);
     }
 
     /**
@@ -86,6 +97,7 @@ public class Main {
      */
     public static Optional<BigDecimal> retrieveBalance(UserProvider userProvider) {
 
+        return Optional.ofNullable(userProvider.getUser().get().getBalance());
     }
 
     /**
@@ -97,6 +109,7 @@ public class Main {
      */
     public static User getUser(UserProvider userProvider) {
 
+        return userProvider.getUser().orElseThrow(() -> new RuntimeException("No user provided"));
     }
 
     /**
@@ -107,8 +120,8 @@ public class Main {
      */
     public static Optional<BigDecimal> retrieveCreditBalance(UserBankAccountProvider userBankAccountProvider) {
 
+        return userBankAccountProvider.getUserBankAccount().get().getCreditBalance();
     }
-
 
     /**
      * @param userProvider
@@ -116,6 +129,8 @@ public class Main {
      */
     public static Optional<User> retrieveUserGmail(UserProvider userProvider) {
 
+        return userProvider.getUser()
+                .filter(user -> user.getEmail().endsWith("@gmail.com"));
     }
 
     /**
@@ -129,6 +144,8 @@ public class Main {
      */
     public static User getUserWithFallback(UserProvider userProvider, UserProvider fallbackProvider) {
 
+        return userProvider.getUser().orElseGet(() -> fallbackProvider.getUser()
+                .orElseThrow(NoSuchElementException::new));
     }
 
     /**
@@ -140,6 +157,9 @@ public class Main {
      */
     public static User getUserWithMaxBalance(List<User> users) {
 
+        return users.stream()
+                .max(Comparator.comparing(User::getBalance))
+                .orElseThrow(NoSuchElementException::new);
     }
 
     /**
@@ -149,8 +169,11 @@ public class Main {
      * @return the lowest balance values
      */
     public static OptionalDouble findMinBalanceValue(List<User> users) {
-    }
 
+        return users.stream()
+                .mapToDouble(user -> user.getBalance().doubleValue())
+                .min();
+    }
 
     /**
      * Calculates a sum of {@link UserBankAccount#getCreditBalance()} of all users
@@ -159,5 +182,11 @@ public class Main {
      * @return total credit balance
      */
     public static double calculateTotalCreditBalance(List<UserBankAccount> bankAccounts) {
+
+        return bankAccounts.stream()
+                .map(UserBankAccount::getCreditBalance)
+                .filter(Optional::isPresent)
+                .mapToDouble(creditBalance -> creditBalance.get().doubleValue())
+                .sum();
     }
 }
