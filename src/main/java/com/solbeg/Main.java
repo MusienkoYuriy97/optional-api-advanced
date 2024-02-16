@@ -24,7 +24,6 @@ public class Main {
      * @return optional object that holds text
      */
     public static Optional<String> optionalOfString(String text) {
-
         return Optional.ofNullable(text);
     }
 
@@ -35,15 +34,12 @@ public class Main {
      * @param amount       money to deposit
      */
     public static void deposit(UserProvider userProvider, BigDecimal amount) {
-
-        Optional<User> userOptional = userProvider.getUser();
-
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            user.setBalance(user.getBalance().add(amount));
-        } else {
-            throw new RuntimeException("User not found!");
-        }
+        userProvider.getUser().ifPresentOrElse(
+                user -> user.setBalance(user.getBalance().add(amount)),
+                () -> {
+                    throw new RuntimeException("User not found!");
+                }
+        );
     }
 
     /**
@@ -53,7 +49,6 @@ public class Main {
      * @return optional object that holds user
      */
     public static Optional<User> optionalOfUser(User user) {
-
         return Optional.ofNullable(user);
     }
 
@@ -66,7 +61,6 @@ public class Main {
      * @return user from provider or defaultUser
      */
     public static User getUser(UserProvider userProvider, User defaultUser) {
-
         return userProvider.getUser()
                 .orElse(defaultUser);
     }
@@ -79,19 +73,7 @@ public class Main {
      * @param userService
      */
     public static void processUser(UserProvider userProvider, UserService userService) {
-
-        Optional<User> userOptional = userProvider.getUser();
-
-        if (userOptional.isPresent()) {
-
-            User user = userOptional.get();
-
-            userService.processUser(user);
-
-        } else {
-
-            userService.processWithNoUser();
-        }
+        userProvider.getUser().ifPresentOrElse(userService::processUser, userService::processWithNoUser);
     }
 
     /**
@@ -102,7 +84,6 @@ public class Main {
      * @return provided or generated user
      */
     public static User getOrGenerateUser(UserProvider userProvider) {
-
         return userProvider.getUser()
                 .orElseGet(Users::generateUser);
     }
@@ -114,7 +95,6 @@ public class Main {
      * @return optional balance
      */
     public static Optional<BigDecimal> retrieveBalance(UserProvider userProvider) {
-
         return userProvider.getUser()
                 .map(User::getBalance);
     }
@@ -127,7 +107,6 @@ public class Main {
      * @return provided user
      */
     public static User getUser(UserProvider userProvider) {
-
         return userProvider.getUser()
                 .orElseThrow(() -> new RuntimeException("No user provider!"));
     }
@@ -139,7 +118,6 @@ public class Main {
      * @return optional credit balance
      */
     public static Optional<BigDecimal> retrieveCreditBalance(UserBankAccountProvider userBankAccountProvider) {
-
         return userBankAccountProvider.getUserBankAccount()
                 .flatMap(UserBankAccount::getCreditBalance);
     }
@@ -150,7 +128,6 @@ public class Main {
      * @return optional User which email ends with "@gmail.com"
      */
     public static Optional<User> retrieveUserGmail(UserProvider userProvider) {
-
         return userProvider.getUser()
                 .filter(user -> user.getEmail().endsWith("@gmail.com"));
     }
@@ -165,7 +142,6 @@ public class Main {
      * @return user got from either userProvider or fallbackProvider
      */
     public static User getUserWithFallback(UserProvider userProvider, UserProvider fallbackProvider) {
-
         return userProvider.getUser()
                 .orElseGet(() -> fallbackProvider.getUser().orElseThrow(NoSuchElementException::new));
     }
@@ -178,7 +154,6 @@ public class Main {
      * @return user with the highest balance
      */
     public static User getUserWithMaxBalance(List<User> users) {
-
         return users.stream()
                 .max(Comparator.comparing(User::getBalance))
                 .orElseThrow(NoSuchElementException::new);
@@ -191,9 +166,9 @@ public class Main {
      * @return the lowest balance values
      */
     public static OptionalDouble findMinBalanceValue(List<User> users) {
-
         return users.stream()
-                .mapToDouble(user -> user.getBalance().doubleValue())
+                .map(User::getBalance)
+                .mapToDouble(BigDecimal::doubleValue)
                 .min();
     }
 
@@ -205,7 +180,6 @@ public class Main {
      * @return total credit balance
      */
     public static double calculateTotalCreditBalance(List<UserBankAccount> bankAccounts) {
-
         return bankAccounts.stream()
                 .map(UserBankAccount::getCreditBalance)
                 .filter(Optional::isPresent)
